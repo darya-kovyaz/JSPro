@@ -10,6 +10,7 @@ require("dotenv").config();
 
 const User = require("../models/user");
 const Task = require("../models/task");
+const Section = require("../models/section");
 
 const secretKey = process.env.SECRET_KEY;
 
@@ -177,6 +178,43 @@ router.get("/getImage", async (req, res) => {
 router.get("/get", async (req, res) => {
     const data = await User.findOne();
     res.send(data);
+});
+
+router.post("/addSection", async (req, res) => {
+    const { titleSection } = req.body;
+    try {
+        const section = new Section({
+            titleSection,
+        });
+        await section.save();
+
+        console.log("New section added");
+        res.status(201).json({ message: "New section added" });
+    } catch (error) {
+        console.error("Error saving data: ", error);
+        res.status(500).send("Error saving data");
+    }
+});
+
+router.get("/getSections", async (req, res) => {
+    try {
+        const sections = await Section.find();
+        res.json(sections);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.delete("/deleteSection/:id", async (req, res) => {
+    try {
+        const section = await Section.findByIdAndDelete(req.params.id);
+        if (!section) {
+            throw new Error("No section found");
+        }
+        res.status(200).send(`Section ${req.params.id} deleted`);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
 });
 
 module.exports = router;

@@ -36,7 +36,10 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
                 .catch((error) => {
                     setTimeout(() => {
                         console.error(error);
-                        setIsLoading(false);
+                        if (error.response && error.response.status === 401) {
+                            setIsAuthenticated(false);
+                            localStorage.removeItem("jwtToken");
+                        }
                     }, 400);
                 });
         } else {

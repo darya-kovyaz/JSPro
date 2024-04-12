@@ -138,7 +138,10 @@ export default function App() {
                             path="/admin"
                             element={<AdminPage setIsAuthenticated={setIsAuthenticated} setUserPhoto={setUserPhoto} />}
                         />
-                        <Route path="/admin/:theme" element={<AdminPage />} />
+                        <Route
+                            path="/admin/:theme"
+                            element={<AdminPage setIsAuthenticated={setIsAuthenticated} setUserPhoto={setUserPhoto} />}
+                        />
                         <Route path="/error/404" element={<Error404 />} />
                     </Routes>
                 </Suspense>

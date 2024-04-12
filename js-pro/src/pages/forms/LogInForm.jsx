@@ -3,7 +3,7 @@ import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import IconClose from "../../icons/IconClose";
+import IconClose from "../../icons/IconCloseBlack";
 import IconEyeClose from "../../icons/IconEyeClose";
 import IconEyeOpen from "../../icons/IconEyeOpen";
 

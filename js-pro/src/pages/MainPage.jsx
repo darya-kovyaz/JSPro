@@ -685,7 +685,7 @@ export default function Main({ setIsAuthenticated, setIsLogInFormOpen }) {
     return (
         <div>
             <div className="absolute inset-0 w-full h-full">
-                <div className="fixed top-14 mt-14 z-50 pl-14 w-[370px] border-r-2">
+                <div className="fixed bg-white top-14 mt-14 z-50 pl-14 w-[370px] border-r-2">
                     <p className="font-montserrat text-xl font-semibold">Разделы</p>
                     <div className="mt-10 flex flex-col items-start gap-5">
                         <button
