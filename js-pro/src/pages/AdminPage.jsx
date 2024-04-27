@@ -3,19 +3,55 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-import { getUserData_EP, uploadPhoto_EP, addSection_EP, getSections_EP } from "../api/api";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
+import { xcodeLight } from "@uiw/codemirror-theme-xcode";
+
+import {
+    getUserData_EP,
+    uploadPhoto_EP,
+    addSection_EP,
+    getSections_EP,
+    updateSectionIndex_EP,
+    addTask_EP,
+    getAllTasks_EP,
+} from "../api/api";
 
 import IconImageCamera from "../icons/IconImageCamera";
-import IconEmptyEdit from "../icons/IconEmptyEdit";
-import IconFullEdit from "../icons/IconFullEdit";
-import IconCloseGray from "../icons/IconCloseGray";
+import IconEmptyEdit from "../icons/admin-panel/IconEmptyEdit";
+import IconFullEdit from "../icons/admin-panel/IconFullEdit";
+import IconCloseGray from "../icons/admin-panel/IconCloseGray";
+import IconUp from "../icons/admin-panel/IconUp";
+import IconDown from "../icons/admin-panel/IconDown";
+import IconPin from "../icons/admin-panel/IconPin";
 
 export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
     const [isLoading, setIsLoading] = useState(true);
     const [data, setData] = useState({});
 
     const [titleSection, setTitleSection] = useState(" ");
+    const [titleSectionEnglish, setTitleSectionEnglish] = useState(" ");
     const [allTitleSections, setAllTitleSections] = useState([]);
+
+    const [titleTask, setTitleTask] = useState(" ");
+    const [sectionTask, setSectionTask] = useState("");
+    const [sectionTaskEnglish, setSectionTaskEnglish] = useState("");
+    const [difficultyTask, setDifficultyTask] = useState("");
+    const [maxPointsTask, setMaxPointsTask] = useState(" ");
+    const [attemptLimitTask, setAttemptLimitTask] = useState(" ");
+    const [memoryLimitTask, setMemoryLimitTask] = useState(" ");
+    const [timeLimitTask, setTimeLimitTask] = useState(" ");
+    const [descriptionTask, setDescriptionTask] = useState(" ");
+    const [testCaseTask, setTestCaseTask] = useState(" ");
+
+    const [inputExampleTask_1, setInputExampleTask_1] = useState(" ");
+    const [inputExampleTask_2, setInputExampleTask_2] = useState(" ");
+    const [inputExampleTask_3, setInputExampleTask_3] = useState(" ");
+    const [outputExampleTask_1, setOutputExampleTask_1] = useState(" ");
+    const [outputExampleTask_2, setOutputExampleTask_2] = useState(" ");
+    const [outputExampleTask_3, setOutputExampleTask_3] = useState(" ");
+
+    const [allTasks, setAllTasks] = useState([]);
 
     const fileInputRef = useRef();
 
@@ -41,15 +77,18 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                     setTimeout(() => {
                         console.error(error);
                         if (error.response && error.response.status === 401) {
+                            navigate("/");
+                            navigate(0);
                             setIsAuthenticated(false);
                             localStorage.removeItem("jwtToken");
+                            console.log("Token not found");
                         }
                     }, 400);
                 });
         } else {
-            setIsLoading(true);
-            setIsAuthenticated(false);
             navigate("/");
+            navigate(0);
+            setIsAuthenticated(false);
             localStorage.removeItem("jwtToken");
             console.log("Token not found");
         }
@@ -60,6 +99,15 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                 setAllTitleSections(response.data);
             })
             .catch((error) => console.error("There was an error retrieving the sections: ", error));
+
+        axios
+            .get(getAllTasks_EP)
+            .then((response) => {
+                setAllTasks(response.data);
+            })
+            .catch((error) => {
+                console.error("There was an error retrieving the tasks: ", error);
+            });
     }, [setIsAuthenticated, navigate]);
 
     const handleFileUpload = (e) => {
@@ -95,25 +143,31 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
         setUserPhoto("");
 
         navigate("/");
+        navigate(0);
     };
 
     function handleButtonClick(theme) {
         navigate(`/admin/${theme}`);
     }
 
+    //Все разделы
     const handleTitleSectionChange = (e) => {
         setTitleSection(e.target.value);
+    };
+
+    const handleTitleSectionEnglishChange = (e) => {
+        setTitleSectionEnglish(e.target.value);
     };
 
     function handleSectionSubmit(e) {
         e.preventDefault();
 
-        if (titleSection.trim() === "") {
+        if (titleSection.trim() === "" || titleSectionEnglish.trim() === "") {
             return;
         }
 
         axios
-            .post(addSection_EP, { titleSection })
+            .post(addSection_EP, { titleSection, titleSectionEnglish })
             .then((response) => {
                 console.log("Section added successfully", response.data);
                 navigate(0);
@@ -133,26 +187,358 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
             });
     }
 
+    function updateNewIndex(newIndex) {
+        newIndex.forEach((section, index) => {
+            axios
+                .post(updateSectionIndex_EP, {
+                    id: section._id,
+                    newIndex: index,
+                })
+                .then((response) => {
+                    console.log(`Index updated`);
+                    navigate(0);
+                })
+                .catch((error) => {
+                    console.error(`Failed to update index`, error);
+                });
+        });
+    }
+
+    function handleMoveUp(indexSection) {
+        if (indexSection === 0) return;
+        setAllTitleSections((prevIndex) => {
+            const newIndex = [...prevIndex];
+            [newIndex[indexSection], newIndex[indexSection - 1]] = [newIndex[indexSection - 1], newIndex[indexSection]];
+            updateNewIndex(newIndex);
+            return newIndex;
+        });
+    }
+
+    function handleMoveDown(indexSection) {
+        if (indexSection === allTitleSections.length - 1) return;
+        setAllTitleSections((prevIndex) => {
+            const newIndex = [...prevIndex];
+            [newIndex[indexSection], newIndex[indexSection + 1]] = [newIndex[indexSection + 1], newIndex[indexSection]];
+            updateNewIndex(newIndex);
+            return newIndex;
+        });
+    }
+
+    // Добавить задание
+    const handleTitleTaskChange = (e) => {
+        setTitleTask(e.target.value);
+    };
+
+    const handleSectionChange = (e) => {
+        setSectionTask(e.target.value);
+    };
+
+    const handleSectionEnglishChange = (e) => {
+        setSectionTaskEnglish(e.target.value);
+    };
+
+    const handleDifficultyChange = (e) => {
+        setDifficultyTask(e.target.value);
+    };
+
+    const handleMaxPointsChange = (e) => {
+        setMaxPointsTask(e.target.value);
+    };
+
+    const handleAttemptLimitChange = (e) => {
+        setAttemptLimitTask(e.target.value);
+    };
+
+    const handleMemoryLimitChange = (e) => {
+        setMemoryLimitTask(e.target.value);
+    };
+
+    const handleTimeLimitChange = (e) => {
+        setTimeLimitTask(e.target.value);
+    };
+
+    const handleTextareaDescriptionChange = (e) => {
+        setDescriptionTask(e.target.value);
+    };
+
+    const handleInputExampleChange_1 = (e) => {
+        setInputExampleTask_1(e.target.value);
+    };
+
+    const handleInputExampleChange_2 = (e) => {
+        setInputExampleTask_2(e.target.value);
+    };
+
+    const handleInputExampleChange_3 = (e) => {
+        setInputExampleTask_3(e.target.value);
+    };
+
+    const handleOutputExampleChange_1 = (e) => {
+        setOutputExampleTask_1(e.target.value);
+    };
+
+    const handleOutputExampleChange_2 = (e) => {
+        setOutputExampleTask_2(e.target.value);
+    };
+
+    const handleOutputExampleChange_3 = (e) => {
+        setOutputExampleTask_3(e.target.value);
+    };
+
+    const handleTestCaseChange = (value) => {
+        const jsonData = JSON.parse(value);
+        setTestCaseTask(jsonData);
+    };
+
+    function handleTaskDelete(taskId) {
+        axios
+            .delete(`http://localhost:3010/api/deleteTask/${taskId}`)
+            .then((response) => {
+                console.log("Section deleted successfully");
+                navigate(0);
+            })
+            .catch((error) => {
+                console.error("Error deleting section:", error);
+            });
+    }
+
+    function handleTaskSubmit(e) {
+        e.preventDefault();
+
+        if (
+            titleTask.trim() === "" ||
+            sectionTask.trim() === "" ||
+            sectionTaskEnglish.trim() === "" ||
+            difficultyTask.trim() === "" ||
+            maxPointsTask.trim() === "" ||
+            attemptLimitTask.trim() === "" ||
+            memoryLimitTask.trim() === "" ||
+            timeLimitTask.trim() === "" ||
+            descriptionTask.trim() === "" ||
+            inputExampleTask_1.trim() === "" ||
+            inputExampleTask_2.trim() === "" ||
+            inputExampleTask_3.trim() === "" ||
+            outputExampleTask_1.trim() === "" ||
+            outputExampleTask_2.trim() === "" ||
+            outputExampleTask_3.trim() === ""
+        ) {
+            return;
+        }
+
+        axios
+            .post(addTask_EP, {
+                titleTask,
+                sectionTask,
+                sectionTaskEnglish,
+                difficultyTask,
+                maxPointsTask,
+                attemptLimitTask,
+                memoryLimitTask,
+                timeLimitTask,
+                descriptionTask,
+                inputExampleTask_1,
+                inputExampleTask_2,
+                inputExampleTask_3,
+                outputExampleTask_1,
+                outputExampleTask_2,
+                outputExampleTask_3,
+                testCaseTask,
+            })
+            .then((response) => {
+                console.log("Task added successfully", response.data);
+                navigate(0);
+            })
+            .catch((error) => {
+                console.error("Error adding task:", error);
+            });
+    }
+
     function renderContent() {
         switch (params.theme) {
             case "all_tasks":
                 return (
-                    <div>
-                        <p>fff</p>
+                    <div className="mt-28 mx-20">
+                        <div className="flex flex-col items-center justify-center gap-5">
+                            {allTasks.map((tasks) => (
+                                <div
+                                    key={tasks._id}
+                                    className="relative h-full w-[750px] px-4 pt-2 pb-6 rounded-lg border"
+                                >
+                                    <button
+                                        onClick={() => handleTaskDelete(tasks._id)}
+                                        className="absolute z-10 top-2 right-2 h-6 w-6"
+                                    >
+                                        <IconCloseGray />
+                                    </button>
+                                    <div className="flex gap-2 items-center mt-2 mb-5">
+                                        <div className="h-5 w-5">
+                                            <IconPin />
+                                        </div>
+                                        <p className="font-montserrat text-xl font-semibold">{tasks.titleTask}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex">
+                                            <div className="relative py-4">
+                                                <p className="absolute top-0 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Описание
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.descriptionTask}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-10 justify-center">
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Раздел
+                                                </p>
+                                                <span className="font-montserrat font-normal">{tasks.sectionTask}</span>
+                                            </div>
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Сложность
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.difficultyTask}
+                                                </span>
+                                            </div>
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Макс. количество очков
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.maxPointsTask}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-10 justify-center">
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Лимит попыток
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.attemptLimitTask}
+                                                </span>
+                                            </div>
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Ограничение памяти
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.memoryLimitTask} <span>Мб</span>
+                                                </span>
+                                            </div>
+                                            <div className="relative w-[200px] border px-2 pt-6 pb-2 rounded-lg">
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Ограничение времени
+                                                </p>
+                                                <span className="font-montserrat font-normal">
+                                                    {tasks.timeLimitTask} <span>с</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="ml-[90px]">
+                                                <p className="font-montserrat font-semibold">Пример No.1</p>
+                                            </div>
+                                            <div className="mt-2 flex gap-10 justify-center">
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Ввод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.inputExampleTask_1}
+                                                    </span>
+                                                </div>
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Вывод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.outputExampleTask_1}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="ml-[90px]">
+                                                <p className="font-montserrat font-semibold">Пример No.2</p>
+                                            </div>
+                                            <div className="mt-2 flex gap-10 justify-center">
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Ввод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.inputExampleTask_2}
+                                                    </span>
+                                                </div>
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Вывод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.outputExampleTask_2}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="ml-[90px]">
+                                                <p className="font-montserrat font-semibold">Пример No.3</p>
+                                            </div>
+                                            <div className="mt-2 flex gap-10 justify-center">
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Ввод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.inputExampleTask_3}
+                                                    </span>
+                                                </div>
+                                                <div className="relative w-[250px] border px-2 pt-6 pb-2 rounded-lg">
+                                                    <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                        Вывод
+                                                    </p>
+                                                    <span className="font-montserrat font-normal">
+                                                        {tasks.outputExampleTask_3}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-center">
+                                            <div className="relative border px-2 pt-6 pb-2 rounded-lg">
+                                                <CodeMirror
+                                                    height="200px"
+                                                    width="600px"
+                                                    theme={xcodeLight}
+                                                    className="flex justify-center "
+                                                    extensions={[javascript()]}
+                                                    value={JSON.stringify(tasks.testCaseTask, null, 1)}
+                                                />
+                                                <p className="absolute top-0 px-1 py-1 left-0 text-xs font-medium font-montserrat text-gray-600">
+                                                    Набор тестов
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 );
             case "add_tasks":
                 return (
                     <div className="mt-28 mx-20">
-                        <div className="flex justify-between gap-5">
-                            <div className="flex flex-col gap-5">
-                                <div className="relative w-[250px] h-full flex flex-col items-center justify-center">
+                        <div className="flex items-start justify-between gap-5">
+                            <div className="flex flex-wrap gap-8">
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
                                     <input
                                         type="text"
                                         id="inputTitleTask"
-                                        className="peer py-4 px-2 w-[250px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                         placeholder=" "
-                                        // onChange={handleEmailChange}
+                                        onChange={handleTitleTaskChange}
                                     />
                                     <label
                                         htmlFor="inputTitleTask"
@@ -160,15 +546,26 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                     >
                                         <span className="font-montserrat font-medium">Название задания</span>
                                     </label>
+                                    {titleTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
                                 </div>
-                                <div className="relative w-[250px] h-full flex flex-col items-center justify-center">
-                                    <input
-                                        type="text"
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <select
                                         id="inputSectionTask"
-                                        className="peer py-4 px-2 w-[250px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
-                                        placeholder=" "
-                                        // onChange={handleEmailChange}
-                                    />
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        value={sectionTask}
+                                        onChange={handleSectionChange}
+                                    >
+                                        <option value="" disabled>
+                                            Выберите раздел
+                                        </option>
+                                        {allTitleSections.map((sections) => (
+                                            <option key={sections._id}>{sections.titleSection}</option>
+                                        ))}
+                                    </select>
                                     <label
                                         htmlFor="inputSectionTask"
                                         className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
@@ -176,14 +573,41 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <span className="font-montserrat font-medium">Раздел</span>
                                     </label>
                                 </div>
-                                <div className="relative w-[250px] h-full flex flex-col items-center justify-center">
-                                    <input
-                                        type="text"
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <select
+                                        id="inputSectionTaskEnglish"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        value={sectionTaskEnglish}
+                                        onChange={handleSectionEnglishChange}
+                                    >
+                                        <option value="" disabled>
+                                            Выберите раздел в URL
+                                        </option>
+                                        {allTitleSections.map((sections) => (
+                                            <option key={sections._id}>{sections.titleSectionEnglish}</option>
+                                        ))}
+                                    </select>
+                                    <label
+                                        htmlFor="inputSectionTaskEnglish"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Раздел в URL</span>
+                                    </label>
+                                </div>
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <select
                                         id="inputDifficulty"
-                                        className="peer py-4 px-2 w-[250px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
-                                        placeholder=" "
-                                        // onChange={handleEmailChange}
-                                    />
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        value={difficultyTask}
+                                        onChange={handleDifficultyChange}
+                                    >
+                                        <option value="" disabled>
+                                            Выберите сложность
+                                        </option>
+                                        <option value="Начальный">Начальный</option>
+                                        <option value="Средний">Средний</option>
+                                        <option value="Продвинутый">Продвинутый</option>
+                                    </select>
                                     <label
                                         htmlFor="inputDifficulty"
                                         className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
@@ -191,13 +615,13 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <span className="font-montserrat font-medium">Сложность</span>
                                     </label>
                                 </div>
-                                <div className="relative w-[250px] h-full flex flex-col items-center justify-center">
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
                                     <input
                                         type="text"
                                         id="inputMaxPoints"
-                                        className="peer py-4 px-2 w-[250px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                         placeholder=" "
-                                        // onChange={handleEmailChange}
+                                        onChange={handleMaxPointsChange}
                                     />
                                     <label
                                         htmlFor="inputMaxPoints"
@@ -205,27 +629,258 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                     >
                                         <span className="font-montserrat font-medium">Макс. количество очков</span>
                                     </label>
+                                    {maxPointsTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <input
+                                        type="text"
+                                        id="inputAttemptLimit"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleAttemptLimitChange}
+                                    />
+                                    <label
+                                        htmlFor="inputAttemptLimit"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Лимит попыток</span>
+                                    </label>
+                                    {attemptLimitTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <input
+                                        type="text"
+                                        id="inputMemoryLimit"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleMemoryLimitChange}
+                                    />
+                                    <label
+                                        htmlFor="inputMemoryLimit"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Ограничение памяти</span>
+                                    </label>
+                                    {memoryLimitTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                    <input
+                                        type="text"
+                                        id="inputTimeLimit"
+                                        className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleTimeLimitChange}
+                                    />
+                                    <label
+                                        htmlFor="inputTimeLimit"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Ограничение времени</span>
+                                    </label>
+                                    {timeLimitTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
                                 </div>
                             </div>
-                            <div className="relative w-[550px] h-full flex flex-col items-center justify-center">
-                                <textarea
-                                    type="text"
-                                    id="textareaDescription"
-                                    className=" resize-none peer py-4 px-2 w-[550px] h-[300px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
-                                    placeholder=" "
-                                ></textarea>
-                                <label
-                                    htmlFor="textareaDescription"
-                                    className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
-                                >
-                                    <span className="font-montserrat font-medium">Описание</span>
-                                </label>
+                            <div className="flex flex-col">
+                                <div className="relative w-[550px] h-full flex flex-col items-center justify-center">
+                                    <textarea
+                                        type="text"
+                                        id="textareaDescription"
+                                        className=" resize-none peer py-4 px-2 w-[550px] h-[150px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleTextareaDescriptionChange}
+                                    ></textarea>
+                                    <label
+                                        htmlFor="textareaDescription"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Описание</span>
+                                    </label>
+                                    {descriptionTask === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-[156px] text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="mt-8">
+                                    <p className="font-montserrat font-semibold">Пример No.1</p>
+                                    <div className="mt-2 gap-2 flex justify-center">
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputInputExample_1"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleInputExampleChange_1}
+                                            />
+                                            <label
+                                                htmlFor="inputInputExample_1"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Ввод</span>
+                                            </label>
+                                            {inputExampleTask_1 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputOutputExample_1"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleOutputExampleChange_1}
+                                            />
+                                            <label
+                                                htmlFor="inputOutputExample_1"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Вывод</span>
+                                            </label>
+                                            {outputExampleTask_1 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-8">
+                                    <p className="font-montserrat font-semibold">Пример No.2</p>
+                                    <div className="mt-2 gap-2 flex justify-center">
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputInputExample_2"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleInputExampleChange_2}
+                                            />
+                                            <label
+                                                htmlFor="inputInputExample_2"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Ввод</span>
+                                            </label>
+                                            {inputExampleTask_2 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputOutputExample_2"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleOutputExampleChange_2}
+                                            />
+                                            <label
+                                                htmlFor="inputOutputExample_2"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Вывод</span>
+                                            </label>
+                                            {outputExampleTask_2 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-8">
+                                    <p className="font-montserrat font-semibold">Пример No.3</p>
+                                    <div className="mt-2 gap-2 flex justify-center">
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputInputExample_3"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleInputExampleChange_3}
+                                            />
+                                            <label
+                                                htmlFor="inputInputExample_3"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Ввод</span>
+                                            </label>
+                                            {inputExampleTask_3 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="relative w-[270px] h-full flex flex-col items-center justify-center">
+                                            <input
+                                                type="text"
+                                                id="inputOutputExample_3"
+                                                className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                                placeholder=" "
+                                                onChange={handleOutputExampleChange_3}
+                                            />
+                                            <label
+                                                htmlFor="inputOutputExample_3"
+                                                className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out text-base duration-100 peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                            >
+                                                <span className="font-montserrat font-medium">Вывод</span>
+                                            </label>
+                                            {outputExampleTask_3 === "" && (
+                                                <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                                    Заполните это поле
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="relative mt-8 z-10 rounded-lg pt-6 pb-1 bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3]">
+                                    <div className="flex justify-center">
+                                        <CodeMirror
+                                            height="300px"
+                                            width="550px"
+                                            theme={xcodeLight}
+                                            className="mt-1 flex justify-center "
+                                            extensions={[javascript()]}
+                                            onChange={(value) => handleTestCaseChange(value)}
+                                        />
+                                        <p className="absolute top-0 left-0 py-4 px-2 font-montserrat font-medium text-xs text-gray-600 -translate-y-1.5">
+                                            Набор тестов
+                                        </p>
+                                        {testCaseTask === "" && (
+                                            <p className="absolute top-0 font-montserrat text-xs mt-[340px] text-[#B06AB3] font-medium">
+                                                Заполните это поле
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-end mt-8">
+                                    <button
+                                        onClick={handleTaskSubmit}
+                                        className="z-10 animated-200 font-montserrat font-semibold rounded-lg py-2 px-5 bg-[#B06AB3]/15 text-[#B06AB3] hover:bg-[#4568DC]/15 hover:text-[#4568DC]"
+                                    >
+                                        Добавить задание
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex justify-end my-10">
-                            <button className="z-10 font-montserrat font-semibold rounded-lg py-2 px-5 bg-[#B06AB3]/15 text-[#B06AB3] hover:bg-[#4568DC]/15 hover:text-[#4568DC]">
-                                Добавить задание
-                            </button>
                         </div>
                     </div>
                 );
@@ -234,43 +889,82 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                     <div className="mt-28 mx-20">
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col items-center justify-center gap-5">
-                                {allTitleSections.map((sections) => (
-                                    <div
-                                        key={sections._id}
-                                        className="relative flex justify-center items-center w-[350px] h-[58px] border rounded-lg"
-                                    >
-                                        <button onClick={() => handleSectionDelete(sections._id)}>
-                                            <div className="absolute top-2 right-2 h-5 w-5">
-                                                <IconCloseGray />
+                                {allTitleSections
+                                    .sort((a, b) => a.indexSection - b.indexSection)
+                                    .map((sections) => (
+                                        <div key={sections._id} className="flex items-center gap-3">
+                                            <div className="relative flex justify-center items-center w-[350px] h-[58px] border rounded-lg">
+                                                <button onClick={() => handleSectionDelete(sections._id)}>
+                                                    <div className="absolute top-2 right-2 h-5 w-5">
+                                                        <IconCloseGray />
+                                                    </div>
+                                                </button>
+                                                <div className="font-montserrat font-semibold">
+                                                    {sections.titleSection}
+                                                </div>
                                             </div>
-                                        </button>
-                                        <p className="font-montserrat font-semibold">{sections.titleSection}</p>
-                                    </div>
-                                ))}
+                                            <div className="flex flex-col gap-1">
+                                                <button
+                                                    onClick={() => handleMoveUp(sections.indexSection)}
+                                                    className="z-10 h-[15px] w-[15px]"
+                                                >
+                                                    <IconUp />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleMoveDown(sections.indexSection)}
+                                                    className="z-10 h-[15px] w-[15px]"
+                                                >
+                                                    <IconDown />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
                             </div>
-                            <div className="relative w-[300px] h-full flex flex-col items-center justify-center">
-                                <input
-                                    type="text"
-                                    id="inputTitleSection"
-                                    className="peer py-4 px-2 w-[300px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
-                                    placeholder=" "
-                                    onChange={handleTitleSectionChange}
-                                />
-                                <label
-                                    htmlFor="inputTitleSection"
-                                    className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out duration-100 text-md peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
-                                >
-                                    <span className="font-montserrat font-medium">Название раздела</span>
-                                </label>
-                                {titleSection === "" && (
-                                    <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
-                                        Заполните это поле
-                                    </p>
-                                )}
-                                <div className="flex justify-end my-8">
+                            <div className="flex flex-col gap-8 items-center">
+                                <div className="relative w-[300px] h-full flex flex-col items-center justify-center">
+                                    <input
+                                        type="text"
+                                        id="inputTitleSection"
+                                        className="peer py-4 px-2 w-[300px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleTitleSectionChange}
+                                    />
+                                    <label
+                                        htmlFor="inputTitleSection"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out duration-100 text-md peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Название раздела</span>
+                                    </label>
+                                    {titleSection === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="relative w-[300px] h-full flex flex-col items-center justify-center">
+                                    <input
+                                        type="text"
+                                        id="inputTitleSectionEnglish"
+                                        className="peer py-4 px-2 w-[300px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
+                                        placeholder=" "
+                                        onChange={handleTitleSectionEnglishChange}
+                                    />
+                                    <label
+                                        htmlFor="inputTitleSectionEnglish"
+                                        className="absolute top-0 left-0 h-full py-4 px-2 transition ease-in-out duration-100 text-md peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
+                                    >
+                                        <span className="font-montserrat font-medium">Название раздела в URL</span>
+                                    </label>
+                                    {titleSectionEnglish === "" && (
+                                        <p className="absolute top-0 font-montserrat text-xs mt-16 text-[#B06AB3] font-medium">
+                                            Заполните это поле
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex justify-end">
                                     <button
                                         onClick={handleSectionSubmit}
-                                        className="z-10 font-montserrat font-semibold rounded-lg py-2 px-5 bg-[#B06AB3]/15 text-[#B06AB3] hover:bg-[#4568DC]/15 hover:text-[#4568DC]"
+                                        className="z-10 animated-200 font-montserrat font-semibold rounded-lg py-2 px-5 bg-[#B06AB3]/15 text-[#B06AB3] hover:bg-[#4568DC]/15 hover:text-[#4568DC]"
                                     >
                                         Добавить раздел
                                     </button>
@@ -382,7 +1076,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <div className="flex flex-col items-start gap-1">
                                             <button
                                                 onClick={() => handleButtonClick("all_tasks")}
-                                                className={`flex gap-2 items-center font-montserrat font-medium text-base  ${
+                                                className={`flex animated-100 gap-2 items-center font-montserrat font-medium text-base  ${
                                                     params.theme === "all_tasks"
                                                         ? "text-[#B06AB3]"
                                                         : "text-gray-800 hover:text-[#B06AB3]"
@@ -399,7 +1093,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                             </button>
                                             <button
                                                 onClick={() => handleButtonClick("add_tasks")}
-                                                className={`flex gap-2 items-center font-montserrat font-medium text-base ${
+                                                className={`flex animated-100 gap-2 items-center font-montserrat font-medium text-base ${
                                                     params.theme === "add_tasks"
                                                         ? "text-[#B06AB3]"
                                                         : " text-gray-800 hover:text-[#B06AB3]"
@@ -418,7 +1112,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <p className="mt-2 font-montserrat font-semibold text-lg">Разделы</p>
                                         <button
                                             onClick={() => handleButtonClick("all_sections")}
-                                            className={`flex gap-2 items-center font-montserrat font-medium text-base  ${
+                                            className={`flex gap-2 animated-100 items-center font-montserrat font-medium text-base  ${
                                                 params.theme === "all_sections"
                                                     ? "text-[#B06AB3]"
                                                     : "text-gray-800 hover:text-[#B06AB3]"

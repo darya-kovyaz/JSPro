@@ -4,4 +4,47 @@
 
 .cm-focused {
     outline: none !important;
-  }
+}
+
+.animated-100 {
+    transition: all;
+    transition-duration: 100ms;
+}
+
+.animated-200 {
+    transition: all;
+    transition-duration: 200ms;
+}
+
+.animated-300 {
+    transition: all;
+    transition-duration: 300ms;
+}
+.animated-400 {
+    transition: all;
+    transition-duration: 400ms;
+}
+.animated-500 {
+    transition: all;
+    transition-duration: 500ms;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+ 
+/* Track */
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: #A3A3A3;
+    border-radius: 5px;
+}
+ 
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: #686868;
+}

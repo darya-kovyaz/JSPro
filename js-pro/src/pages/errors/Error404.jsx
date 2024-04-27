@@ -18,7 +18,7 @@ export default function Error404() {
                 </span>
                 <span className="font-montserrat text-xl font-medium">
                     Вернитесь на{" "}
-                    <button onClick={handleButtonClick} className="text-[#B06AB3]/85 hover:text-[#B06AB3]">
+                    <button onClick={handleButtonClick} className="text-[#B06AB3]/85 hover:text-[#B06AB3] animated-200">
                         главную страницу
                     </button>{" "}
                     и попробуйте начать сначала.

@@ -89,7 +89,7 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
     return (
         <div className="h-full mt-14 flex items-center justify-center">
             <div className="flex flex-col mt-14">
-                <div className="flex gap-24 items-center">
+                <div className="flex gap-24 items-center px-6 bg-white border border-zinc-100 rounded-3xl shadow-sm">
                     {isLoading ? (
                         <div className="animate-pulse">
                             <div className="flex justify-between gap-10 border-b-2 py-6">
@@ -194,7 +194,7 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
                                     <div className="py-6 flex justify-center gap-16">
                                         <div className="flex flex-col items-center">
                                             <p className="font-montserrat font-semibold text-lg bg-gradient-to-t from-[#4568DC] to-[#B06AB3] inline-block text-transparent bg-clip-text">
-                                                null {data.rating}
+                                                 {data.rating}
                                             </p>
                                             <p className="font-montserrat font-medium text-gray-800">
                                                 место в рейтинге
@@ -202,9 +202,9 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
                                         </div>
                                         <div className="flex flex-col items-center">
                                             <p className="font-montserrat font-semibold text-lg bg-gradient-to-t from-[#4568DC] to-[#B06AB3] inline-block text-transparent bg-clip-text">
-                                                null {data.points}
+                                                 {data.points}
                                             </p>
-                                            <p className="font-montserrat font-medium text-gray-800">очков опыта</p>
+                                            <p className="font-montserrat font-medium text-gray-800">оч. опыта</p>
                                         </div>
                                     </div>
                                 </div>

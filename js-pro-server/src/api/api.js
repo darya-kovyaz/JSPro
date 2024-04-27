@@ -61,12 +61,14 @@ router.post("/login", async (req, res) => {
         const user = await checkEmailExists(email);
 
         if (user) {
-            const matchPass = bcrypt.compare(password, user.password);
+            const matchPass = await bcrypt.compare(password, user.password);
             if (matchPass) {
                 //const tokenTimestamp = Math.floor(Date.now() / 1000);
-                const token = jwt.sign({ userId: user._id, userRole: user.role }, secretKey, { expiresIn: "1h" });
+                const token = jwt.sign({ userId: user._id, userRole: user.role }, secretKey, {
+                    expiresIn: "1h",
+                });
 
-                return res.json({ userExists: true, message: "Login successful", token });
+                return res.json({ userExists: true, name: user.firstName, message: "Login successful", token });
             } else {
                 return res.status(400).json({ userExists: true, success: false, message: "Invalid password" });
             }
@@ -106,7 +108,7 @@ router.post("/signUp", async (req, res) => {
         const token = jwt.sign({ userId: newUser._id, userRole: newUser.role }, secretKey, { expiresIn: "1h" });
 
         console.log("New user added successfully");
-        res.status(201).json({ message: "New user added successfully", token: token });
+        res.status(201).json({ message: "New user added successfully", name: newUser.firstName, token: token });
     } catch (error) {
         console.error("Error saving data: ", error);
         res.status(500).send("Error saving data");
@@ -181,15 +183,21 @@ router.get("/get", async (req, res) => {
 });
 
 router.post("/addSection", async (req, res) => {
-    const { titleSection } = req.body;
+    const { titleSection, titleSectionEnglish } = req.body;
     try {
+        const lastSection = await Section.findOne().sort({ indexSection: -1 });
+        const newIndex = lastSection ? lastSection.indexSection + 1 : 0;
+
         const section = new Section({
             titleSection,
+            titleSectionEnglish,
+            indexSection: newIndex,
         });
+
         await section.save();
 
-        console.log("New section added");
-        res.status(201).json({ message: "New section added" });
+        console.log("New section added with index " + newIndex);
+        res.status(201).json({ message: "New section added successfully", indexSection: newIndex });
     } catch (error) {
         console.error("Error saving data: ", error);
         res.status(500).send("Error saving data");
@@ -205,6 +213,17 @@ router.get("/getSections", async (req, res) => {
     }
 });
 
+router.post("/updateSectionIndex", async (req, res) => {
+    try {
+        const { id, newIndex } = req.body;
+        await Section.findByIdAndUpdate(id, { indexSection: newIndex });
+
+        res.status(200).send("Index updated successfully.");
+    } catch (error) {
+        res.status(500).send("Error updating index: " + error.message);
+    }
+});
+
 router.delete("/deleteSection/:id", async (req, res) => {
     try {
         const section = await Section.findByIdAndDelete(req.params.id);
@@ -212,6 +231,157 @@ router.delete("/deleteSection/:id", async (req, res) => {
             throw new Error("No section found");
         }
         res.status(200).send(`Section ${req.params.id} deleted`);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+router.post("/addTask", async (req, res) => {
+    const {
+        titleTask,
+        sectionTask,
+        sectionTaskEnglish,
+        difficultyTask,
+        maxPointsTask,
+        attemptLimitTask,
+        memoryLimitTask,
+        timeLimitTask,
+        descriptionTask,
+        inputExampleTask_1,
+        outputExampleTask_1,
+        inputExampleTask_2,
+        outputExampleTask_2,
+        inputExampleTask_3,
+        outputExampleTask_3,
+        testCaseTask,
+    } = req.body;
+    console.log(req.body);
+    try {
+        const task = new Task({
+            titleTask,
+            sectionTask,
+            sectionTaskEnglish,
+            difficultyTask,
+            maxPointsTask,
+            attemptLimitTask,
+            memoryLimitTask,
+            timeLimitTask,
+            descriptionTask,
+            inputExampleTask_1,
+            outputExampleTask_1,
+            inputExampleTask_2,
+            outputExampleTask_2,
+            inputExampleTask_3,
+            outputExampleTask_3,
+            testCaseTask,
+        });
+
+        task.markModified("testCaseTask");
+        await task.save();
+
+        console.log("New task added");
+        res.status(201).json({ message: "New task added successfully" });
+    } catch (error) {
+        console.error("Error saving data: ", error);
+        res.status(500).send("Error saving data");
+    }
+});
+
+router.get("/getTask/:taskSection/:id", async (req, res) => {
+    try {
+        const { id, taskSection } = req.params;
+        const task = await Task.findOne(
+            { _id: id, sectionTaskEnglish: taskSection },
+            {
+                sectionTask: 1,
+                sectionTaskEnglish: 1,
+                titleTask: 1,
+                descriptionTask: 1,
+                attemptLimitTask: 1,
+                difficultyTask: 1,
+                inputExampleTask_1: 1,
+                outputExampleTask_1: 1,
+                inputExampleTask_2: 1,
+                outputExampleTask_2: 1,
+                inputExampleTask_3: 1,
+                outputExampleTask_3: 1,
+                memoryLimitTask: 1,
+                timeLimitTask: 1,
+                testCaseTask: 1,
+            }
+        );
+        res.json(task);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get("/getTaskTitle", async (req, res) => {
+    try {
+        const task = await Task.find({}, { titleTask: 1 });
+        res.json(task);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get("/getAllTasks", async (req, res) => {
+    try {
+        const tasks = await Task.find();
+        res.json(tasks);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.get("/nextTask/:taskSection/:id", async (req, res) => {
+    try {
+        const { taskSection, id: currentId } = req.params;
+
+        const currentTask = await Task.findOne({ _id: currentId, sectionTaskEnglish: taskSection });
+        if (!currentTask) {
+            return res
+                .status(404)
+                .send({ message: "Current task not found or does not belong to the specified section" });
+        }
+
+        const nextTask = await Task.findOne({
+            sectionTaskEnglish: taskSection,
+            _id: { $gt: currentId },
+        })
+            .sort({ _id: 1 })
+            .limit(1);
+
+        if (!nextTask) {
+            return res.status(404).send({ message: "No next task available in the specified section" });
+        }
+
+        res.json(nextTask);
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
+router.get("/lastTask/:taskSection", async (req, res) => {
+    try {
+        const { taskSection } = req.params;
+        const lastTask = await Task.findOne({ sectionTaskEnglish: taskSection }).sort({ _id: -1 });
+        if (!lastTask) {
+            return res.status(404).send({ message: "No tasks found" });
+        }
+        res.json(lastTask);
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
+router.delete("/deleteTask/:id", async (req, res) => {
+    try {
+        const task = await Task.findByIdAndDelete(req.params.id);
+        if (!task) {
+            throw new Error("No section found");
+        }
+        res.status(200).send(`Task ${req.params.id} deleted`);
     } catch (err) {
         res.status(500).send(err.message);
     }

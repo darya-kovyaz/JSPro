@@ -92,7 +92,7 @@ export default function AboutPage() {
                                 Миссия данного проекта состоит в том, чтобы сделать программирование{" "}
                                 <span className="font-semibold text-[#3355d0] italic">доступным</span> для каждого,{" "}
                                 <span className="font-semibold text-[#3355d0] italic">
-                                    независимо от их уровня опыта
+                                    независимо от их уровня
                                 </span>
                                 .
                             </p>

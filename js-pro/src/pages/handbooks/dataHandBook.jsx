@@ -11,8 +11,8 @@ import IconBackgroundExclamation from "../../icons/backgrounds/IconBackgroundExc
 import IconAttach from "../../icons/IconAttach";
 
 export const data = {
-    section_JSbasics: {
-        title: "Основы JavaScript",
+    JSbasics: {
+        title: "JSbasics",
         content: (
             <div className="">
                 <div className="border-b-2 pb-6">
@@ -216,8 +216,8 @@ export const data = {
             </div>
         ),
     },
-    section_objects: {
-        title: "Объекты",
+    objects: {
+        title: "objects",
         content: (
             <div>
                 <div className="border-b-2 pb-6">
@@ -443,8 +443,8 @@ export const data = {
             </div>
         ),
     },
-    section_datatypes: {
-        title: "Типы данных",
+    datatypes: {
+        title: "datatypes",
         content: (
             <div>
                 <div className="border-b-2 pb-6">
@@ -648,8 +648,8 @@ export const data = {
             </div>
         ),
     },
-    section_functions: {
-        title: "Функции",
+    functions: {
+        title: "function",
         content: (
             <div>
                 <div className="border-b-2 pb-6">
@@ -892,8 +892,8 @@ export const data = {
             </div>
         ),
     },
-    section_inheritance: {
-        title: "Прототипы, наследование",
+    inheritance: {
+        title: "inheritance",
         content: (
             <div>
                 <div className="border-b-2 pb-6">
@@ -1297,8 +1297,8 @@ export const data = {
             </div>
         ),
     },
-    section_classes: {
-        title: "Классы",
+    classes: {
+        title: "classes",
         content: (
             <div>
                 <div className="border-b-2 pb-6">

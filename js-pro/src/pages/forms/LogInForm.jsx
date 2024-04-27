@@ -1,7 +1,6 @@
 import React from "react";
 import axios from "axios";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import IconClose from "../../icons/IconCloseBlack";
 import IconEyeClose from "../../icons/IconEyeClose";
@@ -9,11 +8,11 @@ import IconEyeOpen from "../../icons/IconEyeOpen";
 
 import { login_EP } from "../../api/api";
 
+import { showNotifications } from "../pullstate/Notifications";
+
 import SignUpForm from "./SignUpForm";
 
 export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
-    const navigate = useNavigate();
-
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     const [email, setEmail] = useState(" ");
@@ -21,7 +20,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
     const [isSignUp, setIsSignUp] = useState(false);
 
     const [isEmailInvalid, setIsEmailInvalid] = useState(false);
-    const [isPasswordError, setIsPasswordError] = useState(false);
+    const [isPasswordError, setIsPasswordError] = useState("");
 
     const validateEmail = (email) => {
         return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
@@ -41,6 +40,8 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
 
     const handlePasswordChange = (e) => {
         setPassword(e.target.value);
+
+        setIsPasswordError("");
     };
 
     const togglePasswordVisibility = () => {
@@ -63,7 +64,17 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
                 localStorage.setItem("tokenExpiresIn", "3600");
                 setIsAuthenticated(true);
 
-                navigate(0);
+                const currentHour = new Date().getHours();
+                if (currentHour >= 6 && currentHour < 12) {
+                    showNotifications(`Доброе утро, ${response.data.name}!`, "success");
+                } else if (currentHour >= 12 && currentHour < 18) {
+                    showNotifications(`Добрый день, ${response.data.name}!`, "success");
+                } else if (currentHour >= 18 && currentHour < 23) {
+                    showNotifications(`Добрый вечер, ${response.data.name}!`, "success");
+                } else {
+                    showNotifications(`Доброй ночи, ${response.data.name}!`, "success");
+                }
+
                 toggleLogInForm();
             })
             .catch((error) => {
@@ -71,7 +82,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
 
                 if (error.response && error.response.status === 400) {
                     if (error.response.data.message === "Invalid password") {
-                        setIsPasswordError(true);
+                        setIsPasswordError("Неверный пароль");
                     } else if (error.response.data.message === "User does not exist") {
                         setIsSignUp(true);
                     }
@@ -153,7 +164,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
                         )}
                         {isPasswordError && (
                             <p className="absolute font-montserrat text-sm mt-20 text-[#B06AB3] font-medium">
-                                Неверный пароль
+                                {isPasswordError}
                             </p>
                         )}
                     </div>
@@ -162,7 +173,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
                     <button
                         type="submit"
                         onClick={handleSubmit}
-                        className="font-montserrat text-lg font-semibold bg-[#B06AB3]/15 text-[#B06AB3] text-center rounded-lg w-[270px] py-2 hover:bg-[#4568DC]/15 hover:text-[#4568DC] hover:ease-out hover:duration-200"
+                        className="font-montserrat text-lg font-semibold bg-[#B06AB3]/15 text-[#B06AB3] text-center rounded-lg w-[270px] py-2 hover:bg-[#4568DC]/15 hover:text-[#4568DC] animated-200"
                     >
                         Войти
                     </button>

@@ -4,14 +4,18 @@
   "private": true,
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.2",
+    "@preline/dropdown": "^2.1.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@uiw/codemirror-theme-xcode": "^4.21.25",
     "@uiw/react-codemirror": "^4.21.25",
     "axios": "^1.6.7",
+    "clipboard": "^2.0.11",
     "codemirror": "^6.0.1",
     "highlight.js": "^11.9.0",
     "jwt-decode": "^4.0.0",
+    "pullstate": "^1.25.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.2",
@@ -44,6 +48,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "worker-loader": "^3.0.8"
   }
 }

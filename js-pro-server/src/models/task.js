@@ -3,46 +3,75 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const taskSchema = new Schema({
-    title: {
+    titleTask: {
         type: String,
         required: true,
     },
-    description: {
+    descriptionTask: {
         type: String,
         required: true,
     },
-    section: {
+    sectionTask: {
         type: String,
         required: true,
     },
-    maxPoints: {
+    sectionTaskEnglish: {
+        type: String,
+        required: true,
+    },
+    maxPointsTask: {
         type: Number,
         required: true,
     },
-    difficulty: {
+    difficultyTask: {
         type: String,
-        enum: ["Beginner", "Intermediate", "Advanced"],
+        enum: ["Начальный", "Средний", "Продвинутый"],
         required: true,
     },
-    isActive: {
-        type: Boolean,
-        default: true,
-    },
-    testCases: [
+    testCaseTask: [
         {
-            input: Schema.Types.Mixed,
-            expectedOutput: Schema.Types.Mixed,
-            _id: false,
-        },
-    ],
-    gradingCriteria: [
-        {
-            criterion: String,
+            input: mongoose.Schema.Types.Mixed,
+            expectedOutput: mongoose.Schema.Types.Mixed,
             description: String,
-            points: Number,
             _id: false,
         },
     ],
+    attemptLimitTask: {
+        type: Number,
+        required: false,
+    },
+    memoryLimitTask: {
+        type: Number,
+        required: false,
+    },
+    timeLimitTask: {
+        type: Number,
+        required: false,
+    },
+    inputExampleTask_1: {
+        type: String,
+        required: true,
+    },
+    outputExampleTask_1: {
+        type: String,
+        required: true,
+    },
+    inputExampleTask_2: {
+        type: String,
+        required: true,
+    },
+    outputExampleTask_2: {
+        type: String,
+        required: true,
+    },
+    inputExampleTask_3: {
+        type: String,
+        required: true,
+    },
+    outputExampleTask_3: {
+        type: String,
+        required: true,
+    },
 });
 
 const Task = mongoose.model("Task", taskSchema);

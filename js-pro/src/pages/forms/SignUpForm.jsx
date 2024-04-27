@@ -1,7 +1,6 @@
 import React from "react";
 import axios from "axios";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import IconClose from "../../icons/IconCloseBlack";
 import IconEyeOpen from "../../icons/IconEyeOpen";
@@ -9,8 +8,9 @@ import IconEyeClose from "../../icons/IconEyeClose";
 
 import { signUp_EP } from "../../api/api";
 
+import { showNotifications } from "../pullstate/Notifications";
+
 export default function SignUpForm({ setIsAuthenticated }) {
-    const navigate = useNavigate();
 
     const [isSignUpFormOpen, setIsSignUpFormOpen] = useState(true);
 
@@ -88,11 +88,21 @@ export default function SignUpForm({ setIsAuthenticated }) {
                 if (response.status === 201) {
                     localStorage.setItem("jwtToken", response.data.token);
                     localStorage.setItem("tokenTimestamp", Date.now().toString());
-                    localStorage.setItem("tokenExpiresIn", "3600"); // Токен живет 1 час = 3600 секунд
+                    localStorage.setItem("tokenExpiresIn", "3600");
                     console.log("User added");
-                    navigate("/profile");
                     setIsSignUpFormOpen(false);
                     setIsAuthenticated(true);
+
+                    const currentHour = new Date().getHours();
+                    if (currentHour >= 6 && currentHour < 12) {
+                        showNotifications(`Доброе утро, ${response.data.name}!`, "success");
+                    } else if (currentHour >= 12 && currentHour < 18) {
+                        showNotifications(`Добрый день, ${response.data.name}!`, "success");
+                    } else if (currentHour >= 18 && currentHour < 23) {
+                        showNotifications(`Добрый вечер, ${response.data.name}!`, "success");
+                    } else {
+                        showNotifications(`Доброй ночи, ${response.data.name}!`, "success");
+                    }
                 }
             })
             .catch((error) => {
@@ -253,7 +263,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
                             <button
                                 type="submit"
                                 onClick={handleSubmit}
-                                className="font-montserrat text-lg font-semibold bg-[#B06AB3]/15 text-[#B06AB3] text-center rounded-lg w-[270px] py-2 hover:bg-[#4568DC]/15 hover:text-[#4568DC] hover:ease-out hover:duration-200"
+                                className="font-montserrat text-lg font-semibold bg-[#B06AB3]/15 text-[#B06AB3] text-center rounded-lg w-[270px] py-2 hover:bg-[#4568DC]/15 hover:text-[#4568DC] animated-200"
                             >
                                 Регистрация
                             </button>

@@ -3,9 +3,9 @@ module.exports = {
     content: ["./src/**/*.{js,jsx,ts,tsx}"],
     theme: {
         extend: {
-            fontFamily:{
-                'montserrat': ['Montserrat', 'sans-serif'],
-                'rubik' : ['Rubik', 'sans-serif'],
+            fontFamily: {
+                montserrat: ["Montserrat", "sans-serif"],
+                rubik: ["Rubik", "sans-serif"],
             },
         },
     },

@@ -30,9 +30,7 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                     setTimeout(() => {
                         setCurrentUser(currentUserRes.data);
 
-                        const filteredUsers = allUsersRes.data.filter(
-                            (user) => user.role !== "admin" && user._id !== currentUserRes.data._id
-                        );
+                        const filteredUsers = allUsersRes.data.filter((user) => user.role !== "admin");
                         setUsers(filteredUsers);
 
                         setIsLoading(false);
@@ -53,8 +51,11 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
     return (
         <div className="w-full h-full mt-14 flex items-center justify-center">
             {isLoading ? (
-                <div className="z-20 mt-14 h-[550px] w-[430px] flex flex-col bg-white">
+                <div className="z-20 mt-14 h-[550px] w-[430px] flex flex-col bg-white border border-zinc-100 rounded-3xl shadow-sm">
                     <div className="z-30 w-full h-full flex flex-col gap-5 justify-center animate-pulse">
+                        <div className="flex justify-center items-center">
+                            <p className="mt-5 h-[28px] mx-5 w-full bg-gradient-to-r rounded-full from-[#4568DC]/70 to-[#B06AB3]/70"></p>
+                        </div>
                         <div className="flex items-center">
                             <div className="flex items-center">
                                 <div className="w-[24px] ml-5 pr-5 h-[24px] rounded-full  bg-gradient-to-r from-[#4568DC]/70 to-[#B06AB3]/70"></div>
@@ -128,8 +129,13 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                     </div>
                 </div>
             ) : (
-                <div className="z-20 mt-14 h-[550px] w-[430px] flex flex-col gap-10 pt-14 bg-white">
-                    <div className="z-30 w-full h-full flex flex-col gap-5">
+                <div className="z-20 mt-14 h-[550px] w-[430px] flex flex-col gap-8 pt-5 bg-white border border-zinc-100 rounded-3xl shadow-sm">
+                    <div className="flex justify-center items-center">
+                        <p className="font-montserrat font-semibold text-lg bg-gradient-to-t from-[#4568DC] to-[#B06AB3] inline-block text-transparent bg-clip-text">
+                            Общий рейтинг
+                        </p>
+                    </div>
+                    <div className="z-30 w-full h-full flex flex-col gap-5 overflow-auto">
                         {users.map((user) => (
                             <div key={user._id} className="flex items-center">
                                 <div className="w-[40px] px-5">
@@ -150,7 +156,7 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                 <div className="w-[140px] flex px-5 justify-end">
                                     <p className="font-montserrat text-base font-medium text-gray-800">
                                         {user.points}
-                                        <span>очков</span>
+                                        <span> оч.</span>
                                     </p>
                                 </div>
                             </div>
@@ -176,10 +182,11 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                     )}
                                     <p className="font-montserrat text-base font-semibold">{currentUser.nickname}</p>
                                 </div>
-                                <div className="w-[140px] flex px-5 justify-end">
-                                    <p className="font-montserrat text-base font-medium text-gray-800">
-                                        {currentUser.points} <span className="">очков</span>
-                                    </p>
+                                <div className="w-[140px] flex gap-1 px-5 justify-end">
+                                    <span className="font-montserrat text-base font-medium text-gray-800">
+                                        {currentUser.points}
+                                    </span>
+                                    <p className="font-montserrat text-base font-medium text-gray-800">оч.</p>
                                 </div>
                             </div>
                         </div>
