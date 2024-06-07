@@ -8,6 +8,10 @@ import IconBackgroundSecurity from "../icons/backgrounds/IconBackgroundSecurity"
 import IconBackgroundCircle from "../icons/backgrounds/IconBackgroundCircle";
 import IconImageCamera from "../icons/IconImageCamera";
 
+import IconFirst from "../icons/rating-place/IconFirst";
+import IconSecond from "../icons/rating-place/IconSecond";
+import IconThird from "../icons/rating-place/IconThird";
+
 import { getUserData_EP, uploadPhoto_EP } from "../api/api";
 
 export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
@@ -191,10 +195,24 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
                             <div className="py-6">
                                 <div>
                                     <p className="font-montserrat text-xl font-semibold">Статистика</p>
-                                    <div className="py-6 flex justify-center gap-16">
+                                    <div className="py-6 flex items-end justify-center gap-16">
                                         <div className="flex flex-col items-center">
                                             <p className="font-montserrat font-semibold text-lg bg-gradient-to-t from-[#4568DC] to-[#B06AB3] inline-block text-transparent bg-clip-text">
-                                                 {data.rating}
+                                                {data.ratingPlace === 1 ? (
+                                                    <div className="h-10 w-10 z-50 flex">
+                                                        <IconFirst />
+                                                    </div>
+                                                ) : data.ratingPlace === 2 ? (
+                                                    <div className="h-10 w-10 z-50 flex">
+                                                        <IconSecond />
+                                                    </div>
+                                                ) : data.ratingPlace === 3 ? (
+                                                    <div className="h-10 w-10 z-50 flex">
+                                                        <IconThird />
+                                                    </div>
+                                                ) : (
+                                                    data.ratingPlace
+                                                )}
                                             </p>
                                             <p className="font-montserrat font-medium text-gray-800">
                                                 место в рейтинге
@@ -202,7 +220,7 @@ export default function ProfilePage({ setIsAuthenticated, setUserPhoto }) {
                                         </div>
                                         <div className="flex flex-col items-center">
                                             <p className="font-montserrat font-semibold text-lg bg-gradient-to-t from-[#4568DC] to-[#B06AB3] inline-block text-transparent bg-clip-text">
-                                                 {data.points}
+                                                {data.totalScore}
                                             </p>
                                             <p className="font-montserrat font-medium text-gray-800">оч. опыта</p>
                                         </div>

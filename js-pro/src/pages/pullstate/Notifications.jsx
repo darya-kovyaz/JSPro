@@ -24,8 +24,6 @@ export const showNotifications = (message, success) => {
         });
     }, 200);
 
-   
-
     setTimeout(() => {
         Notifications.update((s) => {
             s.notifications = s.notifications.map((i) => {

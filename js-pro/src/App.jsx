@@ -1,7 +1,7 @@
 import React from "react";
 import { useState, useLayoutEffect } from "react";
 import { Suspense } from "react";
-import { Route, Routes, Link } from "react-router-dom";
+import { Route, Routes, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
@@ -29,6 +29,8 @@ export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userPhoto, setUserPhoto] = useState("");
     const [userRole, setUserRole] = useState("");
+
+    const navigate = useNavigate();
 
     const notifications = useStoreState(Notifications).notifications;
 
@@ -59,9 +61,13 @@ export default function App() {
                     }
                 });
         } else {
-            setIsAuthenticated(false);
             localStorage.removeItem("jwtToken");
+            setIsAuthenticated(false);
+            setIsLogInFormOpen(true);
+            navigate("/");
+            console.log("Token not found");
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated]);
 
     function toggleLogInForm() {
@@ -112,7 +118,7 @@ export default function App() {
                     )}
                 </div>
             </div>
-            <div className="w-full fixed z-50 pointer-events-none">
+            <div className="w-full fixed z-60 pointer-events-none">
                 <div className="flex flex-col justify-end items-end ">
                     <div className="flex flex-col gap-2 mt-36 mr-10">
                         {notifications.slice(0, 5).map((notification) => {
@@ -185,6 +191,10 @@ export default function App() {
                         />
                         <Route
                             path="/admin/:theme"
+                            element={<AdminPage setIsAuthenticated={setIsAuthenticated} setUserPhoto={setUserPhoto} />}
+                        />
+                        <Route
+                            path="/admin/:theme/:section"
                             element={<AdminPage setIsAuthenticated={setIsAuthenticated} setUserPhoto={setUserPhoto} />}
                         />
                         <Route path="/error/404" element={<Error404 />} />

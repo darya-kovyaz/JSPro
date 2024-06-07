@@ -8,6 +8,10 @@ import IconBackgroundServer from "../icons/backgrounds/IconBackgroundServer";
 import IconBackgroundCircle from "../icons/backgrounds/IconBackgroundCircle";
 import IconBackgroundAnalytic from "../icons/backgrounds/IconBackgroundAnalytic";
 
+import IconFirst from "../icons/rating-place/IconFirst";
+import IconSecond from "../icons/rating-place/IconSecond";
+import IconThird from "../icons/rating-place/IconThird";
+
 import { getUserData_EP, getUsersData_EP, getImage_EP } from "../api/api";
 
 export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
@@ -28,10 +32,17 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
             Promise.all([currentUserReq, allUsersReq])
                 .then(([currentUserRes, allUsersRes]) => {
                     setTimeout(() => {
-                        setCurrentUser(currentUserRes.data);
+                        const filteredUsers = allUsersRes.data
+                            .filter((user) => user.role !== "admin")
+                            .sort((a, b) => b.totalScore - a.totalScore);
 
-                        const filteredUsers = allUsersRes.data.filter((user) => user.role !== "admin");
+                        filteredUsers.forEach((user, index) => {
+                            user.ratingPlace = index + 1;
+                        });
                         setUsers(filteredUsers);
+
+                        const currentUser = filteredUsers.find((user) => user._id === currentUserRes.data._id);
+                        setCurrentUser(currentUser);
 
                         setIsLoading(false);
                     }, 400);
@@ -138,10 +149,26 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                     <div className="z-30 w-full h-full flex flex-col gap-5 overflow-auto">
                         {users.map((user) => (
                             <div key={user._id} className="flex items-center">
-                                <div className="w-[40px] px-5">
-                                    <p className="text-center font-montserrat text-base font-semibold">{user.rating}</p>
+                                <div className="w-[40px] px-7 flex justify-center items-center">
+                                    <span className="w-[40px] text-center font-montserrat text-base font-semibold">
+                                        {user.ratingPlace === 1 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconFirst />
+                                            </div>
+                                        ) : user.ratingPlace === 2 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconSecond />
+                                            </div>
+                                        ) : user.ratingPlace === 3 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconThird />
+                                            </div>
+                                        ) : (
+                                            user.ratingPlace
+                                        )}
+                                    </span>
                                 </div>
-                                <div className="w-[250px] px-5 flex gap-3 items-center">
+                                <div className="w-[230px] px-5 flex gap-3 items-center">
                                     {user.image ? (
                                         <img
                                             className="h-12 w-12 rounded-full"
@@ -155,7 +182,7 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                 </div>
                                 <div className="w-[140px] flex px-5 justify-end">
                                     <p className="font-montserrat text-base font-medium text-gray-800">
-                                        {user.points}
+                                        {user.totalScore}
                                         <span> оч.</span>
                                     </p>
                                 </div>
@@ -163,14 +190,28 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                         ))}
                     </div>
                     {currentUser && (
-                        <div key={currentUser._id} className="z-40 w-full flex items-end justify-start py-5 border-t-2">
-                            <div className="flex items-center">
-                                <div className="w-[40px] px-5">
-                                    <p className="text-center font-montserrat text-base font-semibold">
-                                        {currentUser.rating}
-                                    </p>
+                        <div className="z-40 w-full flex items-end justify-start py-5 border-t-2">
+                            <div key={currentUser._id} className="flex items-center">
+                                <div className="w-[40px] px-7 flex justify-center items-center">
+                                    <span className="w-[40px] text-center font-montserrat text-base font-semibold">
+                                        {currentUser.ratingPlace === 1 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconFirst />
+                                            </div>
+                                        ) : currentUser.ratingPlace === 2 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconSecond />
+                                            </div>
+                                        ) : currentUser.ratingPlace === 3 ? (
+                                            <div className="h-10 w-10 z-50 flex">
+                                                <IconThird />
+                                            </div>
+                                        ) : (
+                                            currentUser.ratingPlace
+                                        )}
+                                    </span>
                                 </div>
-                                <div className="w-[250px] px-6 flex gap-3 items-center">
+                                <div className="w-[230px] px-5 flex gap-3 items-center">
                                     {currentUser.image ? (
                                         <img
                                             className="h-12 w-12 rounded-full"
@@ -182,11 +223,11 @@ export default function RatingPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                     )}
                                     <p className="font-montserrat text-base font-semibold">{currentUser.nickname}</p>
                                 </div>
-                                <div className="w-[140px] flex gap-1 px-5 justify-end">
-                                    <span className="font-montserrat text-base font-medium text-gray-800">
-                                        {currentUser.points}
-                                    </span>
-                                    <p className="font-montserrat text-base font-medium text-gray-800">оч.</p>
+                                <div className="w-[140px] flex px-5 justify-end">
+                                    <p className="font-montserrat text-base font-medium text-gray-800">
+                                        {currentUser.totalScore}
+                                        <span> оч.</span>
+                                    </p>
                                 </div>
                             </div>
                         </div>

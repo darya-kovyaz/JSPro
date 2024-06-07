@@ -11,7 +11,6 @@ import { signUp_EP } from "../../api/api";
 import { showNotifications } from "../pullstate/Notifications";
 
 export default function SignUpForm({ setIsAuthenticated }) {
-
     const [isSignUpFormOpen, setIsSignUpFormOpen] = useState(true);
 
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -66,6 +65,12 @@ export default function SignUpForm({ setIsAuthenticated }) {
         setIsPasswordVisible(!isPasswordVisible);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            handleSubmit(e);
+        }
+    };
+
     function handleSubmit(e) {
         e.preventDefault();
 
@@ -79,6 +84,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
             password.trim() === "" ||
             isEmailInvalid
         ) {
+            showNotifications("Заполните все поля", "error");
             return;
         }
 
@@ -87,6 +93,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
             .then((response) => {
                 if (response.status === 201) {
                     localStorage.setItem("jwtToken", response.data.token);
+                    localStorage.setItem("userId", response.data.userId);
                     localStorage.setItem("tokenTimestamp", Date.now().toString());
                     localStorage.setItem("tokenExpiresIn", "3600");
                     console.log("User added");
@@ -109,8 +116,9 @@ export default function SignUpForm({ setIsAuthenticated }) {
                 console.error("Error adding user: ", error);
                 if (error.response && error.response.status === 409) {
                     const message = error.response.data;
-                    if (message.includes("Email") || message.includes("Nickname")) {
+                    if (message.includes("Email")) {
                         setEmailError("Почта уже используется");
+                    } else if (message.includes("Nickname")) {
                         setNicknameError("Имя пользователя уже занято");
                     }
                 }
@@ -142,6 +150,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
                                     className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                     placeholder="Ivanov"
                                     onChange={handleSecondNameChange}
+                                    onKeyDown={handleKeyDown}
                                 />
                                 <label
                                     htmlFor="inputSecondName"
@@ -162,6 +171,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
                                     className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                     placeholder="Ivan"
                                     onChange={handleFirstNameChange}
+                                    onKeyDown={handleKeyDown}
                                 />
                                 <label
                                     htmlFor="inputFirstName"
@@ -182,12 +192,13 @@ export default function SignUpForm({ setIsAuthenticated }) {
                                     className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                     placeholder="ivanivanov"
                                     onChange={handleNicknameChange}
+                                    onKeyDown={handleKeyDown}
                                 />
                                 <label
                                     htmlFor="inputNickname"
                                     className="absolute top-0 left-[90px] h-full py-4 px-2 transition ease-in-out duration-100 text-md peer-focus:text-xs peer-focus:text-gray-600 peer-focus:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1.5 peer-[:not(:placeholder-shown)]:text-gray-600"
                                 >
-                                    <span className="font-montserrat font-medium">Имя пользователя</span>
+                                    <span className="font-montserrat font-medium">Никнейм</span>
                                 </label>
                                 {nickname === "" && (
                                     <p className="absolute font-montserrat text-sm mt-20 text-[#B06AB3] font-medium">
@@ -207,6 +218,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
                                     className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                     placeholder="email@gmail.com"
                                     onChange={handleEmailChange}
+                                    onKeyDown={handleKeyDown}
                                 />
                                 <label
                                     htmlFor="inputEmail"
@@ -237,6 +249,7 @@ export default function SignUpForm({ setIsAuthenticated }) {
                                     className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                                     placeholder="********"
                                     onChange={handlePasswordChange}
+                                    onKeyDown={handleKeyDown}
                                 />
                                 <label
                                     htmlFor="inputPassword"

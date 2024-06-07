@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
-const User = require("../models/user");
+const { User, TaskAttempt } = require("../models/user");
 const Task = require("../models/task");
 const Section = require("../models/section");
 
@@ -63,9 +63,8 @@ router.post("/login", async (req, res) => {
         if (user) {
             const matchPass = await bcrypt.compare(password, user.password);
             if (matchPass) {
-                //const tokenTimestamp = Math.floor(Date.now() / 1000);
                 const token = jwt.sign({ userId: user._id, userRole: user.role }, secretKey, {
-                    expiresIn: "1h",
+                    expiresIn: "24h",
                 });
 
                 return res.json({ userExists: true, name: user.firstName, message: "Login successful", token });
@@ -92,7 +91,6 @@ router.post("/signUp", async (req, res) => {
     if (nicknameExists) {
         return res.status(409).send("Nickname already taken");
     }
-
     try {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -105,7 +103,7 @@ router.post("/signUp", async (req, res) => {
         });
         await newUser.save();
 
-        const token = jwt.sign({ userId: newUser._id, userRole: newUser.role }, secretKey, { expiresIn: "1h" });
+        const token = jwt.sign({ userId: newUser._id, userRole: newUser.role }, secretKey, { expiresIn: "24h" });
 
         console.log("New user added successfully");
         res.status(201).json({ message: "New user added successfully", name: newUser.firstName, token: token });
@@ -128,6 +126,19 @@ router.get("/getUserData", verifyToken, async (req, res) => {
     }
 });
 
+router.get("/getUserDataTask", verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ _id: req.user.userId }, { tasks: 1 });
+        if (!user) {
+            return res.status(400).send("User not found");
+        }
+        res.json(user);
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        res.status(500).send("Error fetching user data");
+    }
+});
+
 router.get("/getUsersData", async (req, res) => {
     try {
         const users = await User.find({});
@@ -135,6 +146,20 @@ router.get("/getUsersData", async (req, res) => {
     } catch (error) {
         console.error("Error fetching users: ", error);
         res.status(500).send("Error fetching users");
+    }
+});
+
+router.post("/updateRating", async (req, res) => {
+    try {
+        const users = await User.find({ role: "viewer" }).sort({ totalScore: -1 });
+        for (let index = 0; index < users.length; index++) {
+            users[index].ratingPlace = index + 1;
+            await users[index].save();
+        }
+        res.send("Rating place updated for all users");
+    } catch (error) {
+        console.error("Error updating rating place: ", error);
+        res.status(500).send("Error updating rating place");
     }
 });
 
@@ -255,7 +280,6 @@ router.post("/addTask", async (req, res) => {
         outputExampleTask_3,
         testCaseTask,
     } = req.body;
-    console.log(req.body);
     try {
         const task = new Task({
             titleTask,
@@ -287,6 +311,143 @@ router.post("/addTask", async (req, res) => {
     }
 });
 
+router.post("/addInformationTask/:id", async (req, res) => {
+    const {
+        userId,
+        executionTime,
+        sizeFormatted,
+        success,
+        maxPoints,
+        difficulty,
+        timeRequired,
+        timeCompletion,
+        memoryRequired,
+        memoryCompletion,
+    } = req.body;
+    const { id } = req.params;
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        if (user.role === "admin") {
+            return res.status(403).send("Admins cannot receive scores");
+        }
+
+        let task = user.tasks.find((task) => task.taskId.equals(id));
+        let taskExists = task ? true : false;
+
+        if (!taskExists) {
+            task = new TaskAttempt({
+                taskId: id,
+                attempts: [],
+                attemptsLeft: 3,
+                bestScore: 0,
+            });
+        }
+
+        let point = 0;
+        let enoughTime = timeRequired - timeCompletion;
+        let enoughMemory = memoryRequired - memoryCompletion;
+        if (task.attempts.length >= 3) {
+            return res.status(400).send("Maximum number of attempts reached");
+        }
+
+        if (difficulty === "Начальный") {
+            if (task.attempts.length === 0 && success && enoughTime < timeRequired && enoughMemory < memoryRequired) {
+                point = maxPoints;
+            } else if (
+                task.attempts.length === 1 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 1;
+            } else if (
+                task.attempts.length === 2 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 2;
+            } else {
+                point = 0;
+            }
+            task.bestScore = Math.max(task.bestScore, point);
+            point = task.bestScore;
+        } else if (difficulty === "Средний") {
+            if (task.attempts.length === 0 && success && enoughTime < timeRequired && enoughMemory < memoryRequired) {
+                point = maxPoints;
+            } else if (
+                task.attempts.length === 1 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 2;
+            } else if (
+                task.attempts.length === 2 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 4;
+            } else {
+                point = 0;
+            }
+            task.bestScore = Math.max(task.bestScore, point);
+            point = task.bestScore;
+        } else if (difficulty === "Продвинутый") {
+            if (task.attempts.length === 0 && success && enoughTime < timeRequired && enoughMemory < memoryRequired) {
+                point = maxPoints;
+            } else if (
+                task.attempts.length === 1 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 3;
+            } else if (
+                task.attempts.length === 2 &&
+                success &&
+                enoughTime < timeRequired &&
+                enoughMemory < memoryRequired
+            ) {
+                point = maxPoints - 6;
+            } else {
+                point = 0;
+            }
+            task.bestScore = Math.max(task.bestScore, point);
+            point = task.bestScore;
+        }
+
+        task.attemptsLeft -= 1;
+
+        task.attempts.push({
+            score: point,
+            attemptNumber: task.attempts.length + 1,
+            timeTaken: executionTime,
+            memoryUsed: sizeFormatted,
+            correct: success,
+        });
+
+        user.totalScore += point;
+
+        if (!taskExists) {
+            user.tasks.push(task);
+        }
+
+        task.markModified("tests");
+        await user.save();
+        res.send(task);
+    } catch (error) {
+        console.error("Error saving task attempt data: ", error);
+        res.status(500).send("Error saving data");
+    }
+});
+
 router.get("/getTask/:taskSection/:id", async (req, res) => {
     try {
         const { id, taskSection } = req.params;
@@ -299,6 +460,7 @@ router.get("/getTask/:taskSection/:id", async (req, res) => {
                 descriptionTask: 1,
                 attemptLimitTask: 1,
                 difficultyTask: 1,
+                maxPointsTask: 1,
                 inputExampleTask_1: 1,
                 outputExampleTask_1: 1,
                 inputExampleTask_2: 1,
@@ -357,6 +519,47 @@ router.get("/nextTask/:taskSection/:id", async (req, res) => {
         }
 
         res.json(nextTask);
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
+router.get("/previousTask/:taskSection/:id", async (req, res) => {
+    try {
+        const { taskSection, id: currentId } = req.params;
+
+        const currentTask = await Task.findOne({ _id: currentId, sectionTaskEnglish: taskSection });
+        if (!currentTask) {
+            return res
+                .status(404)
+                .send({ message: "Current task not found or does not belong to the specified section" });
+        }
+
+        const previousTask = await Task.findOne({
+            sectionTaskEnglish: taskSection,
+            _id: { $lt: currentId },
+        })
+            .sort({ _id: -1 })
+            .limit(1);
+
+        if (!previousTask) {
+            return res.status(404).send({ message: "No previous task available in the specified section" });
+        }
+
+        res.json(previousTask);
+    } catch (error) {
+        res.status(500).send({ message: error.message });
+    }
+});
+
+router.get("/firstTask/:taskSection", async (req, res) => {
+    try {
+        const { taskSection } = req.params;
+        const firstTask = await Task.findOne({ sectionTaskEnglish: taskSection }).sort({ _id: 1 });
+        if (!firstTask) {
+            return res.status(404).send({ message: "No tasks found" });
+        }
+        res.json(firstTask);
     } catch (error) {
         res.status(500).send({ message: error.message });
     }

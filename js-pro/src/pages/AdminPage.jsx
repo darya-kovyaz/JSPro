@@ -53,6 +53,11 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
 
     const [allTasks, setAllTasks] = useState([]);
 
+    const [currentSection, setCurrentSection] = useState(null);
+    const [filteredTasks, setFilteredTasks] = useState(allTasks);
+
+    const [activeSection, setActiveSection] = useState("all");
+
     const fileInputRef = useRef();
 
     const navigate = useNavigate();
@@ -93,22 +98,76 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
             console.log("Token not found");
         }
 
-        axios
-            .get(getSections_EP)
-            .then((response) => {
-                setAllTitleSections(response.data);
-            })
-            .catch((error) => console.error("There was an error retrieving the sections: ", error));
+        if (currentSection) {
+            const filtered = allTasks.filter((task) => task.sectionTask === currentSection);
+            setFilteredTasks(filtered);
+        } else {
+            setFilteredTasks(allTasks);
+        }
+    }, [setIsAuthenticated, navigate, allTasks, currentSection]);
 
-        axios
-            .get(getAllTasks_EP)
-            .then((response) => {
-                setAllTasks(response.data);
-            })
-            .catch((error) => {
-                console.error("There was an error retrieving the tasks: ", error);
-            });
-    }, [setIsAuthenticated, navigate]);
+    useEffect(() => {
+        const token = localStorage.getItem("jwtToken");
+        if (token) {
+            const decodedToken = jwtDecode(token);
+            if (decodedToken.userRole !== "admin") {
+                navigate("/error/404");
+            }
+            axios
+                .get(getSections_EP)
+                .then((response) => {
+                    setAllTitleSections(response.data);
+                })
+                .catch((error) => {
+                    console.error(error);
+                    if (error.response && error.response.status === 401) {
+                        navigate("/");
+                        navigate(0);
+                        setIsAuthenticated(false);
+                        localStorage.removeItem("jwtToken");
+                        console.log("Token not found");
+                    }
+                });
+        } else {
+            navigate("/");
+            navigate(0);
+            setIsAuthenticated(false);
+            localStorage.removeItem("jwtToken");
+            console.log("Token not found");
+        }
+    }, [navigate, setIsAuthenticated]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("jwtToken");
+        if (token) {
+            const decodedToken = jwtDecode(token);
+            if (decodedToken.userRole !== "admin") {
+                navigate("/error/404");
+            }
+            axios
+                .get(getAllTasks_EP)
+                .then((response) => {
+                    setAllTasks(response.data);
+                })
+
+                .catch((error) => {
+                    console.error(error);
+                    if (error.response && error.response.status === 401) {
+                        navigate("/");
+                        navigate(0);
+                        setIsAuthenticated(false);
+                        localStorage.removeItem("jwtToken");
+                        console.log("Token not found");
+                    }
+                });
+        } else {
+            navigate("/");
+            navigate(0);
+            setIsAuthenticated(false);
+            localStorage.removeItem("jwtToken");
+            console.log("Token not found");
+        }
+    }, [navigate, setIsAuthenticated]);
 
     const handleFileUpload = (e) => {
         const img = e.target.files[0];
@@ -223,6 +282,19 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
             return newIndex;
         });
     }
+
+    //Все задания
+    const handleCurrentSection = (sectionTask, theme, section) => {
+        setCurrentSection(sectionTask);
+        setActiveSection(section);
+        navigate(`/admin/${theme}/${section}`);
+    };
+
+    const handleAllSectionsClick = (theme) => {
+        setCurrentSection(null);
+        setActiveSection("all");
+        navigate(`/admin/${theme}`);
+    };
 
     // Добавить задание
     const handleTitleTaskChange = (e) => {
@@ -358,8 +430,44 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
             case "all_tasks":
                 return (
                     <div className="mt-28 mx-20">
+                        <div className="flex justify-center items-center">
+                            <div className="relative z-10 flex-wrap justify-center items-center flex mb-10 gap-7">
+                                <div>
+                                    <button
+                                        onClick={() => handleAllSectionsClick("all_tasks")}
+                                        className={`z-10 font-montserrat text-sm font-medium bg-white border border-zinc-200 rounded-3xl shadow-sm py-2 px-[18px] animated-200 ${
+                                            activeSection === "all"
+                                                ? " text-[#B06AB3]"
+                                                : "text-gray-800 hover:text-[#B06AB3]"
+                                        }`}
+                                    >
+                                        Все разделы
+                                    </button>
+                                </div>
+                                {allTitleSections.map((sections) => (
+                                    <div key={sections._id}>
+                                        <button
+                                            onClick={() =>
+                                                handleCurrentSection(
+                                                    sections.titleSection,
+                                                    "all_tasks",
+                                                    sections.titleSectionEnglish
+                                                )
+                                            }
+                                            className={`z-10 font-montserrat text-sm font-medium bg-white border border-zinc-200 rounded-3xl shadow-sm py-2 px-[18px] animated-200 ${
+                                                params.section === sections.titleSectionEnglish
+                                                    ? " text-[#B06AB3]"
+                                                    : "text-gray-800 hover:text-[#B06AB3]"
+                                            }`}
+                                        >
+                                            {sections.titleSection}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <div className="flex flex-col items-center justify-center gap-5">
-                            {allTasks.map((tasks) => (
+                            {filteredTasks.map((tasks) => (
                                 <div
                                     key={tasks._id}
                                     className="relative h-full w-[750px] px-4 pt-2 pb-6 rounded-lg border"
@@ -1076,7 +1184,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <div className="flex flex-col items-start gap-1">
                                             <button
                                                 onClick={() => handleButtonClick("all_tasks")}
-                                                className={`flex animated-100 gap-2 items-center font-montserrat font-medium text-base  ${
+                                                className={`flex animated-200 gap-2 items-center font-montserrat font-medium text-base  ${
                                                     params.theme === "all_tasks"
                                                         ? "text-[#B06AB3]"
                                                         : "text-gray-800 hover:text-[#B06AB3]"
@@ -1093,7 +1201,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                             </button>
                                             <button
                                                 onClick={() => handleButtonClick("add_tasks")}
-                                                className={`flex animated-100 gap-2 items-center font-montserrat font-medium text-base ${
+                                                className={`flex animated-200 gap-2 items-center font-montserrat font-medium text-base ${
                                                     params.theme === "add_tasks"
                                                         ? "text-[#B06AB3]"
                                                         : " text-gray-800 hover:text-[#B06AB3]"
@@ -1112,7 +1220,7 @@ export default function AdminPage({ setIsAuthenticated, setUserPhoto }) {
                                         <p className="mt-2 font-montserrat font-semibold text-lg">Разделы</p>
                                         <button
                                             onClick={() => handleButtonClick("all_sections")}
-                                            className={`flex gap-2 animated-100 items-center font-montserrat font-medium text-base  ${
+                                            className={`flex gap-2 animated-200 items-center font-montserrat font-medium text-base  ${
                                                 params.theme === "all_sections"
                                                     ? "text-[#B06AB3]"
                                                     : "text-gray-800 hover:text-[#B06AB3]"

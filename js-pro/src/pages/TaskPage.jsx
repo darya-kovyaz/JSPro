@@ -2,6 +2,7 @@ import React from "react";
 import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 import { showNotifications } from "./pullstate/Notifications";
 
@@ -23,8 +24,9 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
 
     const [task, setTask] = useState([]);
 
+    const [attemptInfo, setAttemptInfo] = useState([]);
+
     const [code, setCode] = useState(" ");
-    const [success, setSuccess] = useState(" ");
     const workerRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState("task");
@@ -38,71 +40,97 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
 
     useEffect(() => {
         const token = localStorage.getItem("jwtToken");
-        if (token) {
-            axios
-                .get(`http://localhost:3010/api/getTask/${taskSection}/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
-                .then((response) => {
-                    setTask(response.data);
-                    if (!firstTaskId) {
-                        setFirstTaskId(response.data._id);
-                    }
-                })
-                .catch((error) => {
-                    console.error(error);
-                    if (error.response && error.response.status === 401) {
-                        navigate("/");
-                        navigate(0);
-                        setIsAuthenticated(false);
-                        localStorage.removeItem("jwtToken");
-                        console.log("Token not found");
-                    }
-                });
-            axios
-                .get(`http://localhost:3010/api/lastTask/${taskSection}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                })
-                .then((response) => {
-                    if (taskSection === response.data.sectionTaskEnglish) {
-                        setLastTaskId(response.data._id);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error fetching the last task ID:", error);
-                });
-        } else {
-            navigate("/");
-            navigate(0);
-            setIsLogInFormOpen(true);
-            setIsAuthenticated(false);
-            localStorage.removeItem("jwtToken");
-            console.log("Token not found");
-        }
 
-        if (firstTaskId && id === firstTaskId) {
-            setButtonTextLeft("Вернуться");
-        } else {
-            setButtonTextLeft("Предыдущее задание");
-        }
+        const handleError = (error, message) => {
+            console.error(message, error);
+        };
 
-        if (lastTaskId && id === lastTaskId) {
-            setButtonTextRight("Завершить");
-        } else {
-            setButtonTextRight("Следующее задание");
-        }
+        // Загрузка задания
+        axios
+            .get(`http://localhost:3010/api/getTask/${taskSection}/${id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            .then((response) => {
+                setTask(response.data);
+            })
+            .catch((error) => handleError(error, "Error fetching the task"));
 
+        // Загрузка первого и последнего задания в разделе
+        Promise.all([
+            axios.get(`http://localhost:3010/api/firstTask/${taskSection}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            }),
+            axios.get(`http://localhost:3010/api/lastTask/${taskSection}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            }),
+        ])
+            .then(([firstResponse, lastResponse]) => {
+                if (taskSection === firstResponse.data.sectionTaskEnglish) {
+                    setFirstTaskId(firstResponse.data._id);
+                }
+                if (taskSection === lastResponse.data.sectionTaskEnglish) {
+                    setLastTaskId(lastResponse.data._id);
+                }
+            })
+            .catch((error) => handleError(error, "Error fetching task boundaries"));
+    }, [setIsAuthenticated, setIsLogInFormOpen, taskSection, id]);
+
+    // Обновление текста кнопок
+    useEffect(() => {
+        setButtonTextLeft(firstTaskId && id === firstTaskId ? "Вернуться" : "Предыдущее задание");
+        setButtonTextRight(lastTaskId && id === lastTaskId ? "Завершить" : "Следующее задание");
+    }, [firstTaskId, lastTaskId, id]);
+
+    // Загрузка и отправка данных пользователя
+    useEffect(() => {
+        const token = localStorage.getItem("jwtToken");
+
+        axios
+            .get("http://localhost:3010/api/getUserDataTask", {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            .then((response) => {
+                const relevantAttempts = response.data.tasks.filter((attempt) => attempt.taskId === id);
+                setAttemptInfo(relevantAttempts[0]);
+            })
+            .catch((error) => console.error("Error fetching user task data:", error));
+    }, [id, setIsAuthenticated]);
+
+    useEffect(() => {
         workerRef.current = new Worker();
 
         workerRef.current.onmessage = (e) => {
+            const token = localStorage.getItem("jwtToken");
             if (e.data.success) {
-                const anyTestPassed = e.data.testResults.some((test) => test.passed);
-                setSuccess(anyTestPassed);
-                showNotifications("Ответ успешно отправлен", "success");
-                //console.log("Sanitized Code:", e.data);
+                const allTestsPassed = e.data.allTestsPassed;
+
+                const decodedToken = jwtDecode(token);
+                axios
+                    .post(`http://localhost:3010/api/addInformationTask/${id}`, {
+                        userId: decodedToken.userId,
+                        success: allTestsPassed,
+                        executionTime: e.data.executionTime,
+                        sizeFormatted: e.data.sizeFormatted,
+                        maxPoints: task.maxPointsTask,
+                        difficulty: task.difficultyTask,
+                        timeRequired: task.timeLimitTask,
+                        timeCompletion: e.data.executionTime,
+                        memoryRequired: task.memoryLimitTask,
+                        memoryCompletion: e.data.sizeFormatted,
+                    })
+                    .then((response) => {
+                        console.log("Data saved successfully");
+                        setAttemptInfo(response.data);
+                        showNotifications("Ответ успешно отправлен", "success");
+                    })
+                    .catch((error) => {
+                        console.error("Error saving data:", error);
+                        if (error.response && error.response.status === 400) {
+                            showNotifications("Достигнуто максимальное количество попыток", "error");
+                        }
+                    });
             } else {
                 showNotifications("Ошибка при отправке ответа", "error");
-                //console.error("Error in worker:", e.data.error);
             }
         };
 
@@ -113,7 +141,8 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
         return () => {
             workerRef.current.terminate();
         };
-    }, [navigate, code, setIsAuthenticated, setIsLogInFormOpen, id, firstTaskId, lastTaskId, taskSection]);
+        // eslint-disable-next-line
+    }, [task]);
 
     const handleTabChange = (tabName) => {
         setActiveTab(tabName);
@@ -131,6 +160,19 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
         setIsButtonDisabled(!value.trim());
     };
 
+    const handlePreviousTask = () => {
+        axios
+            .get(`http://localhost:3010/api/previousTask/${taskSection}/${id}`)
+            .then((response) => {
+                const previousTaskId = response.data._id;
+                navigate(`/task/${taskSection}/${previousTaskId}`);
+            })
+            .catch((error) => {
+                console.error("Error fetching previous task:", error);
+                navigate(`/section/${taskSection}`);
+            });
+    };
+
     const handleNextTask = () => {
         axios
             .get(`http://localhost:3010/api/nextTask/${taskSection}/${id}`)
@@ -140,7 +182,7 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
             })
             .catch((error) => {
                 console.error("Error fetching next task:", error);
-                navigate("/");
+                navigate(`/section/${taskSection}`);
             });
     };
 
@@ -148,13 +190,13 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
         <div className="h-full w-full mt-14 flex items-start justify-center">
             <div className="flex flex-col mt-5">
                 <div className="mt-4 mb-3 flex justify-between">
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-3">
+                    <button onClick={handlePreviousTask} className="z-20 flex items-center gap-3">
                         <div className="h-10 w-10">
                             <IconReturn />
                         </div>
                         <p className="font-montserrat font-medium">{buttonTextLeft}</p>
                     </button>
-                    <button onClick={handleNextTask} className="flex items-center gap-3">
+                    <button onClick={handleNextTask} className="z-20 flex items-center gap-3">
                         <div className="h-10 w-10 scale-x-[-1]">
                             <IconReturn />
                         </div>
@@ -162,7 +204,7 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                     </button>
                 </div>
                 <div className="flex justify-between items-start gap-8">
-                    <div className="w-[600px] overflow-auto min-h-[300px] max-h-[550px] px-4 py-4 flex flex-col border rounded-lg">
+                    <div className="z-30 w-[600px] bg-white overflow-auto min-h-[300px] max-h-[550px] px-4 py-4 flex flex-col border rounded-lg">
                         <div className="w-[265px] pb-2 flex gap-5 border-b-[1px]">
                             <button
                                 onClick={() => handleTabChange("task")}
@@ -198,9 +240,23 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                 <p className="text-xs font-medium font-montserrat text-gray-600">
                                                     Попытка:
                                                 </p>
-                                                <span className="text-xs font-medium font-montserrat text-gray-600">
-                                                    1/{task.attemptLimitTask}
-                                                </span>
+                                                {attemptInfo?.attempts?.length > 0 ? (
+                                                    <div className="text-xs font-medium font-montserrat text-gray-600">
+                                                        {attemptInfo.attempts[attemptInfo.attempts.length - 1]
+                                                            .attemptNumber +
+                                                            1 ===
+                                                        4
+                                                            ? attemptInfo.attempts[attemptInfo.attempts.length - 1]
+                                                                  .attemptNumber
+                                                            : attemptInfo.attempts[attemptInfo.attempts.length - 1]
+                                                                  .attemptNumber}
+                                                        /{task.attemptLimitTask}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs font-medium font-montserrat text-gray-600">
+                                                        1/3
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="pt-4 flex gap-1">
@@ -226,6 +282,21 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                 <span className="font-montserrat text-justify">
                                                     {task.descriptionTask}
                                                 </span>
+                                            </div>
+                                        </div>
+                                        <div className="pt-2">
+                                            <div className="pt-2">
+                                                <p className="font-montserrat font-semibold">Формат ввода</p>
+                                                <p className="font-montserrat text-[15px]">
+                                                    На первой строке должна быть объявлена переменная, содержащая
+                                                    входные данные.
+                                                </p>
+                                            </div>
+                                            <div className="pt-2">
+                                                <p className="font-montserrat font-semibold">Формат вывода</p>
+                                                <p className="font-montserrat text-[15px]">
+                                                    Программа должна возвращать результат выполнения.
+                                                </p>
                                             </div>
                                         </div>
                                         <div>
@@ -329,8 +400,8 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                     </div>
                                 )}
                                 {activeTab === "answers" && (
-                                    <div className="flex">
-                                        {success === " " && (
+                                    <div className="mt-3 flex flex-col">
+                                        {attemptInfo === undefined && (
                                             <div className="h-full w-full flex justify-center items-center">
                                                 <div className="h-[300px] flex justify-center items-center">
                                                     <p className="font-montserrat text-gray-600 opacity-70 font-semibold">
@@ -339,15 +410,17 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                 </div>
                                             </div>
                                         )}
-                                        {success === true && (
-                                            <div className="mt-3 flex grow justify-between">
+                                        {attemptInfo?.attempts?.map((attemptDetail) => (
+                                            <div key={attemptDetail._id} className="mt-3 flex grow justify-between">
                                                 <div className="mr-20 flex items-center gap-5">
                                                     <div>
                                                         <p className="text-xs font-montserrat text-gray-600 font-medium">
                                                             No.
                                                         </p>
                                                         <div className="mt-1 flex justify-center">
-                                                            <p className="font-montserrat ">1</p>
+                                                            <p className="font-montserrat ">
+                                                                {attemptDetail.attemptNumber}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                     <div>
@@ -355,8 +428,14 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                             Статус ответа
                                                         </p>
                                                         <div className="mt-1">
-                                                            <p className="font-montserrat font-medium text-[#3CAA3C]">
-                                                                Верно
+                                                            <p
+                                                                className={`font-montserrat font-medium ${
+                                                                    attemptDetail.correct === true
+                                                                        ? "text-[#3CAA3C]"
+                                                                        : "text-[#CE2029]"
+                                                                }`}
+                                                            >
+                                                                {attemptDetail.correct === true ? "Верно" : "Неверно"}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -366,8 +445,8 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                         Время
                                                     </p>
                                                     <div className="mt-1 flex justify-center">
-                                                        <p className="font-montserrat text-sm">
-                                                            3/{task.timeLimitTask} c
+                                                        <p key={task._id} className="font-montserrat text-sm">
+                                                            {attemptDetail.timeTaken} c / {task.timeLimitTask} c
                                                         </p>
                                                     </div>
                                                 </div>
@@ -376,8 +455,11 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                         Память
                                                     </p>
                                                     <div className="mt-1 flex justify-center">
-                                                        <p className="font-montserrat text-sm">
-                                                            3/{task.memoryLimitTask} Мб
+                                                        <p key={task._id} className="font-montserrat text-sm">
+                                                            {attemptDetail.memoryUsed < 0.01
+                                                                ? (attemptDetail.memoryUsed * 1024).toFixed(2) + " KB"
+                                                                : attemptDetail.memoryUsed.toFixed(2) + " MB"}
+                                                            / {task.memoryLimitTask} MB
                                                         </p>
                                                     </div>
                                                 </div>
@@ -386,51 +468,19 @@ export default function TaskPage({ setIsLogInFormOpen, setIsAuthenticated }) {
                                                         Баллы
                                                     </p>
                                                     <div className="mt-1 flex justify-center">
-                                                        <p className="font-montserrat text-sm">
-                                                            3/{task.attemptLimitTask}
+                                                        <p key={task._id} className="font-montserrat text-sm">
+                                                            {attemptDetail.score} / {task.maxPointsTask}
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
-                                        {success === false && (
-                                            <div className="mt-3 flex grow justify-between">
-                                                <div className="flex gap-5">
-                                                    <div>
-                                                        <p className="text-xs font-montserrat text-gray-600 font-medium">
-                                                            No.
-                                                        </p>
-                                                        <div className="mt-1 flex justify-center">
-                                                            <p className="font-montserrat ">1</p>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-montserrat text-gray-600 font-medium">
-                                                            Статус ответа
-                                                        </p>
-                                                        <div className="mt-1">
-                                                            <p className="font-montserrat font-medium text-[#CE2029]">
-                                                                Неверно
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <p className="text-xs font-montserrat text-gray-600 font-medium">
-                                                        Баллы
-                                                    </p>
-                                                    <div className="mt-1 flex justify-center">
-                                                        <p className="font-montserrat">0/{task.attemptLimitTask}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                        ))}
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-                    <div className="w-[510px] h-[550px] flex flex-col py-4 border rounded-lg">
+                    <div className="z-30 w-[510px] h-[550px] flex flex-col py-4 border rounded-lg">
                         <div className="flex items-center cm-focused">
                             <CodeMirror
                                 height="450px"

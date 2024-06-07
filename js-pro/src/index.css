@@ -6,6 +6,10 @@
     outline: none !important;
 }
 
+.z-60{
+    z-index: 60;
+}
+
 .animated-100 {
     transition: all;
     transition-duration: 100ms;

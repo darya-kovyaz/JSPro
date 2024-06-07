@@ -48,11 +48,18 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
         setIsPasswordVisible(!isPasswordVisible);
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            handleSubmit(e);
+        }
+    };
+
     function handleSubmit(e) {
         e.preventDefault();
         setIsEmailInvalid(isEmailInvalid);
 
         if (email.trim() === "" || password.trim() === "" || isEmailInvalid) {
+            showNotifications("Заполните все поля", "error");
             return;
         }
 
@@ -117,6 +124,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
                             className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-grey-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                             placeholder="email@gmail.com"
                             onChange={handleEmailChange}
+                            onKeyDown={handleKeyDown}
                         />
                         <label
                             htmlFor="inputEmail"
@@ -142,6 +150,7 @@ export default function LogInForm({ toggleLogInForm, setIsAuthenticated }) {
                             className="peer py-4 px-2 w-[270px] font-montserrat text-base placeholder:text-transparent block bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#B06AB3] focus:border-[#B06AB3] rounded-lg pt-6 pb-2"
                             placeholder="********"
                             onChange={handlePasswordChange}
+                            onKeyDown={handleKeyDown}
                         />
                         <label
                             htmlFor="inputPassword"

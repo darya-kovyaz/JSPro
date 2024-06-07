@@ -6,6 +6,8 @@ export const signUp_EP = address + "/api/signUp";
 
 export const getUserData_EP = address + "/api/getUserData";
 
+export const getUserDataTask_EP = address + "/api/getUserDataTask";
+
 export const getUsersData_EP = address + "/api/getUsersData";
 
 export const uploadPhoto_EP = address + "/api/uploadPhoto";
@@ -23,5 +25,7 @@ export const addTask_EP = address + "/api/addTask";
 export const getTask_EP = address + "/api/getTask";
 
 export const getAllTasks_EP = address + "/api/getAllTasks";
+
+export const updateRating_EP = address + "/api/updateRating";
 
 // export const deleteSection_EP = address + "/api/deleteSection";
